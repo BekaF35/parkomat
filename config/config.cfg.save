@@ -1,0 +1,38 @@
+
+# Фаил конфигурации
+
+# Полный путь до библиотеки шины  I2C
+library					-./config/lib/device.so
+# Имя драйвера принтера
+device					-/dev/ttyXIO2
+#Скорость порта принтера
+
+#define B0		0x00000000
+#define B50		0x00000001
+#define B75		0x00000002
+#define B110	0x00000003
+#define B134	0x00000004
+#define B150	0x00000005
+#define B200	0x00000006
+#define B300	0x00000007
+#define B600	0x00000008
+#define B1200	0x00000009
+#define B1800	0x0000000a
+#define B2400	0x0000000b
+#define B4800	0x0000000c
+#define B9600	0x0000000d
+#define B19200	0x0000000e
+#define B38400	0x0000000f
+
+printerBaudrate			-14
+
+# Стоимость 1-го часа стоянки
+hourly rate				-50
+# Полный путь до файла чека
+ticket file			  	-./config/ticket/ticket.txt
+# Номер канала принтера(см  мост I2C-UART протокол взаимодействия)
+printer channel				-2
+# Номер канала купюроприемника(см  мост I2C-UART протокол взаимодействия)
+bill validator channel		-1
+# Максимальная принимаемая сумма 1-го сеанса
+max sum 					-500
