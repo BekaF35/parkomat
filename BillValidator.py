@@ -538,7 +538,7 @@ class bill_validator:
 			if (len(rx_byte)>0):
 				print "/BillValidator.get_byte()>"
 				return ord(rx_byte)
-		raise GettingByteError('Errort timeout')
+		raise GettingByteError('Error timeout')
 		
 		
 		

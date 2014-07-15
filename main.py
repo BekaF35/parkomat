@@ -9,7 +9,7 @@ import qrcode
 from pysimplesoap.client import SoapClient
 from pysimplesoap.simplexml import SimpleXMLElement
 from datetime import datetime,timedelta
-from RSA import rsa
+import rsa
 
 #===================================================================================================
 
@@ -56,9 +56,9 @@ class parkomat:
 
 		
 		self.__tx_buff=[]																				# tx Буффер
-		self.__qr=0																					# Переменная для хранения экземпляра класса QRcode
-		self.__billvalidatorLib=""																	# Переменная содержащая путь к библиотеке libi2c.so
-		self.__printerLib=""																		# Переменная содержащая путь к библиотеке libi2c.so
+		self.__qr=0																						# Переменная для хранения экземпляра класса QRcode
+		self.__billvalidatorLib=""																		# Переменная содержащая путь к библиотеке libi2c.so
+		self.__printerLib=""																			# Переменная содержащая путь к библиотеке libi2c.so
 
 		self.__printerDev=""																			# Переменная содержащая имя драйвера принтера
 		self.__billvalidatorDev=""																		# Переменная содержащая имя драйвера купюроприемника
@@ -73,6 +73,9 @@ class parkomat:
 		self.__hourly_rate=0																			# Переменная храняшая стоимость одного часа стоянки
 		self.__period=0																					# Переменная хранящая количество оплаченных часов
 		self.__max_sum=0
+
+		self.__privateKey='';
+		self.__publicKey=''
 
 		self.__d=0
 		self.__e=0
@@ -171,26 +174,26 @@ class parkomat:
 				self.__namespace=line[start:end].strip()												#
 				print "пространство имен фискального сервера: ",self.__namespace						#
 
-			if(line.find("key d")!=-1):																# Если содержит строку 'max sum' извлекаем максимальное значения принимаемой суммы за сеанс
+			if(line.find("key d")!=-1):																	# Если содержит строку 'max sum' извлекаем максимальное значения принимаемой суммы за сеанс
 				start=line.find("-")+1																	#
 				end=line.find(" ",start)																#
-				self.__d=int(line[start:end].strip())												#
-				print "self.__d:",self.__d									#
+				self.__d=int(line[start:end].strip())													#
+				print "self.__d:",self.__d																#
 
-			if(line.find("key e")!=-1):																# Если содержит строку 'max sum' извлекаем максимальное значения принимаемой суммы за сеанс
+			if(line.find("key e")!=-1):																	# Если содержит строку 'max sum' извлекаем максимальное значения принимаемой суммы за сеанс
 				start=line.find("-")+1																	#
 				end=line.find(" ",start)																#
-				self.__e=int(line[start:end].strip())												#
-				print "self.__e:",self.__e									#
+				self.__e=int(line[start:end].strip())													#
+				print "self.__e:",self.__e																#
 
-			if(line.find("key n")!=-1):																# Если содержит строку 'max sum' извлекаем максимальное значения принимаемой суммы за сеанс
+			if(line.find("key n")!=-1):																	# Если содержит строку 'max sum' извлекаем максимальное значения принимаемой суммы за сеанс
 				start=line.find("-")+1																	#
 				end=line.find(" ",start)																#
-				self.__n=int(line[start:end].strip())												#
-				print "self.__n:",self.__n									#
+				self.__n=int(line[start:end].strip())													#
+				print "self.__n:",self.__n		
 
-
-
+		self.__privateKey=rsa.PrivateKey.load_pkcs1(open('config/privateKey.pem','rb').read());
+		self.__publicKey=rsa.PublicKey.load_pkcs1(open('config/publicKey.pem','rb').read());
 
 		self.__printerIface=interface(self.__printerDev,self.__printerBaudrate)								# Создаем класс интерфейса принтера
 		self.__billvalidatorIface=interface(self.__billvalidatorDev,self.__billvalidatorBaudrate)			# Создаем класс интерфейса купюроприемника
@@ -203,13 +206,8 @@ class parkomat:
 
 		self.__kd=kd("/dev/kdXIO")
 
-		self.__rsa=rsa()
-
 		self.__soapClient=SoapClient(																				# создаем класс клиента фискального сервера
-			location=self.__soapServerLocation,																			#
-			action=self.__action,																						#
-			namespace=self.__namespace,																					#
-			soap_ns='soap', ns = False
+				wsdl="http://192.168.15.68:85/WebService1.asmx?WSDL"
 			)	
 
 
@@ -231,8 +229,10 @@ class parkomat:
 			border=0,																					# ширина рамки в квадратах
 		)	
 
-		self.__qr.add_data(self.__rsa.code(int(self.__ticketID),self.__e,self.__n))						# и кодируем строку в qrcode
-		
+
+		self.__qr.add_data(self.__ticketID)
+		self.__qr.add_data(rsa.sign(self.__ticketID,self.__privateKey,'SHA-1'))							# и кодируем строку в qrcode
+		print rsa.sign(self.__ticketID,self.__privateKey,'SHA-1')
 
 
 		fd=open(self.__ticket_File,"r")																	# Открываем файл чека
@@ -385,9 +385,9 @@ class parkomat:
 		my_test_header.marshall('dtParkEnd', str(datetime.now()+timedelta(hours=int(self.__period))))
 		my_test_header.marshall('payment',self.__billvalidator.Payment)
 		my_test_header.marshall('listBond', self.__billvalidator.bondList)
-
-		res=self.__soapClient.addCheck(rec=headers)
-				
+		res=self.__soapClient.addCheck(rec={})
+					
+		
 ##############################################################################################################
 # Функция возвращает стоимость услуги в час
 ##############################################################################################################		
@@ -419,9 +419,9 @@ class parkomat:
 		
 example=parkomat("./config/config.cfg")
 
-while(1):
-	example.display('Внесите наличые и нажмите \'D\'.\n\nCтоим.усл.-{}р/ч'.format(example.get_hourly_rate()))
-	if(not example.receiving_bills()):
-		continue
-	example.print_ticket()
-	example.loggingDataToServer()
+# while(1):
+# 	example.display('Внесите наличые и нажмите \'D\'.\n\nCтоим.усл.-{}р/ч'.format(example.get_hourly_rate()))
+	# if(not example.receiving_bills()):
+# 		continue
+example.print_ticket()
+example.loggingDataToServer()

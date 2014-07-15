@@ -191,15 +191,15 @@ class rsa:
 	
 
 
-# test=RSA()
-# keys=test.DEgeneration(64)
-# d=keys[0]
-# e=keys[1]
-# n=keys[2]
-# code=test.code(11111,e,n)
-# print code
+test=rsa()
+keys=test.DEgeneration(64)
+d=keys[0]
+e=keys[1]
+n=keys[2]
+code=test.code(11111,e,n)
+print code
 
-# print test.decode(code,d,n)
+print test.decode(code,d,n)
 
 
 
